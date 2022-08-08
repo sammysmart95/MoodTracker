@@ -1,24 +1,90 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, LayoutAnimation } from 'react-native';
 import format from 'date-fns/format';
 import { MoodOptionWithTimestamp } from '../types';
+import { TouchableOpacity } from 'react-native-gesture-handler';
 import { theme } from '../theme';
+import { useAppContext } from '../AppProvider';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
+import {
+  PanGestureHandler,
+  PanGestureHandlerGestureEvent,
+  PanGestureHandlerStateChangeEvent,
+  State as GestureState,
+} from 'react-native-gesture-handler';
 
 type MoodItemRowProps = {
   item: MoodOptionWithTimestamp;
 };
 
+const maxPan = 80;
+
 export const MoodItemRow: React.FC<MoodItemRowProps> = ({ item }) => {
+  const { handleRemoveMood } = useAppContext();
+  const offset = useSharedValue(0);
+  const [shouldRemove, setShouldRemove] = React.useState(false);
+
+  const animatedStyles = useAnimatedStyle(() => ({
+    transform: [{ translateX: offset.value }],
+  }));
+
+  const onGestureEvent = React.useCallback(
+    (event: PanGestureHandlerGestureEvent) => {
+      const xVal = Math.floor(event.nativeEvent.translationX);
+
+      offset.value = xVal;
+
+      if (Math.abs(xVal) <= maxPan) {
+        setShouldRemove(false);
+      } else {
+        setShouldRemove(true);
+      }
+    },
+    [offset],
+  );
+
+  const onHandlerStateChange = React.useCallback(
+    (event: PanGestureHandlerStateChangeEvent) => {
+      if (event.nativeEvent.state === GestureState.END) {
+        if (shouldRemove) {
+          offset.value = withTiming(Math.sign(offset.value) * 2000);
+          LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+          setTimeout(() => {
+            handleRemoveMood(item);
+          }, 250);
+        } else {
+          offset.value = withTiming(0);
+        }
+      }
+    },
+    [handleRemoveMood, item, offset, shouldRemove],
+  );
+
   return (
-    <View style={styles.moodItem}>
-      <View style={styles.iconAndDescription}>
-        <Text style={styles.moodValue}>{item.mood.emoji}</Text>
-        <Text style={styles.moodDescription}>{item.mood.description}</Text>
-      </View>
-      <Text style={styles.moodDate}>
-        {format(new Date(item.timestamp), "dd MMM, yyyy 'at' h:mmaaa")}
-      </Text>
-    </View>
+    <PanGestureHandler
+      // minDeltaX={1}
+      // minDeltaY={100}
+      activeOffsetX={[-1, 1]}
+      activeOffsetY={[-100, 100]}
+      onGestureEvent={onGestureEvent}
+      onHandlerStateChange={onHandlerStateChange}>
+      <Animated.View style={[styles.moodItem, animatedStyles]}>
+        <View style={styles.iconAndDescription}>
+          <Text style={styles.moodValue}>{item.mood.emoji}</Text>
+          <Text style={styles.moodDescription}>{item.mood.description}</Text>
+        </View>
+        <Text style={styles.moodDate}>
+          {format(new Date(item.timestamp), "dd MMM, yyyy 'at' h:mmaaa")}
+        </Text>
+        <TouchableOpacity onPress={() => handleRemoveMood(item)}>
+          <Text style={styles.deleteText}>delete</Text>
+        </TouchableOpacity>
+      </Animated.View>
+    </PanGestureHandler>
   );
 };
 
@@ -31,6 +97,7 @@ const styles = StyleSheet.create({
   moodDate: {
     textAlign: 'center',
     color: theme.colorLavender,
+    // fontFamily: 'Kalam-Regular',
   },
   moodItem: {
     backgroundColor: 'white',
@@ -43,10 +110,16 @@ const styles = StyleSheet.create({
   moodDescription: {
     fontSize: 18,
     color: theme.colorPurple,
-    fontWeight: 'bold',
+    // fontWeight: 'bold',
+    // fontFamily: 'Kalam-Bold',
   },
   iconAndDescription: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  deleteText: {
+    fontSize: 18,
+    color: '#1D84B5',
+    // fontFamily: 'Kalam-Bold',
   },
 });

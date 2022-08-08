@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Text, View, StyleSheet, Pressable } from 'react-native';
-import { MoodOptionType } from '../types';
+import { MoodOption } from '../types';
 import { theme } from '../theme';
 
-const moodOptions: MoodOptionType[] = [
+const moodOptions: MoodOption[] = [
   { emoji: '🧑‍💻', description: 'studious' },
   { emoji: '🤔', description: 'pensive' },
   { emoji: '😊', description: 'happy' },
@@ -12,18 +12,32 @@ const moodOptions: MoodOptionType[] = [
 ];
 
 type MoodPickerProps = {
-  handleSelectMood: (moodOption: MoodOptionType) => void;
+  onAddMood: (moodOption: MoodOption) => void;
 };
 
-export const MoodPicker: React.FC<MoodPickerProps> = ({ handleSelectMood }) => {
-  const [selectedMood, setSelectedMood] = useState<MoodOptionType>();
+export const MoodPicker: React.FC<MoodPickerProps> = ({ onAddMood }) => {
+  const [selectedOption, setSelectedOption] = useState<MoodOption>();
+  const [selectedMood, setSelectedMood] = useState<MoodOption>();
+  const [hasAdded, setHasAdded] = useState(false);
 
-  const handleSelect = React.useCallback(() => {
-    if (selectedMood) {
-      handleSelectMood(selectedMood);
-      setSelectedMood(undefined);
+  const handleAddMood = React.useCallback(() => {
+    if (selectedOption) {
+      setHasAdded(true);
+      onAddMood(selectedOption);
+      setSelectedOption(undefined);
     }
-  }, [handleSelectMood, selectedMood]);
+  }, [onAddMood, selectedOption]);
+
+  if (hasAdded) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.titleText}>Thank you!</Text>
+        <Pressable style={styles.button} onPress={() => setHasAdded(false)}>
+          <Text style={styles.buttonText}>Add another</Text>
+        </Pressable>
+      </View>
+    );
+  }
   return (
     <View style={styles.container}>
       <Text style={styles.heading}>How are you right now?</Text>
@@ -46,7 +60,7 @@ export const MoodPicker: React.FC<MoodPickerProps> = ({ handleSelectMood }) => {
           </View>
         ))}
       </View>
-      <Pressable style={styles.button} onPress={handleSelect}>
+      <Pressable style={styles.button} onPress={handleAddMood}>
         <Text style={styles.buttonText}>Choose</Text>
       </Pressable>
     </View>
@@ -96,6 +110,13 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textAlign: 'center',
     marginBottom: 20,
+  },
+  titleText: {
+    textAlign: 'center',
+    fontSize: 18,
+    color: '#454C73',
+    marginBottom: 10,
+    // fontFamily: 'Kalam-Bold',
   },
   button: {
     backgroundColor: theme.colorPurple,
